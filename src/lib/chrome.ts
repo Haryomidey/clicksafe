@@ -135,8 +135,8 @@ const chromeMock = {
         const currentSites = [
           {
             id: 101,
-            url: getLocalStorageVal('sim_current_url', 'https://github.com/microsoft/vscode'),
-            title: getLocalStorageVal('sim_current_title', 'Microsoft VS Code - GitHub Repository'),
+            url: getLocalStorageVal('sim_current_url', window.location.href),
+            title: getLocalStorageVal('sim_current_title', document.title || 'Current page'),
             active: true,
           },
         ];

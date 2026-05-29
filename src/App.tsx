@@ -76,7 +76,7 @@ export default function App() {
               <div className="p-1 rounded bg-neutral-800 text-white font-extrabold shrink-0 mt-0.5">💡</div>
               <div>
                 <span className="text-white block font-bold mb-0.5">Developer Testing Helper:</span>
-                Use the <strong className="text-white font-semibold">"Simulate active tab"</strong> selectors inside the extension popup above to alter the browser's active tab URL! Click "Scan Active Page" to watch the heuristic algorithm process threat metrics real-time.
+                Use the installed extension on any web page to scan the active tab and intercept risky links before navigation.
               </div>
             </div>
           </div>

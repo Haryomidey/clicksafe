@@ -30,6 +30,10 @@ export const evaluateRisk = (reasons: string[], isFileDownload = false): RiskEva
     const r = reason.toLowerCase();
     if (r.includes('punycode') || r.includes('spoofing')) {
       score += 45;
+    } else if (r.includes('blocked list')) {
+      score += 100;
+    } else if (r.includes('strict mode')) {
+      score += 25;
     } else if (r.includes('insecure http') || r.includes('no encryption')) {
       score += 15;
     } else if (r.includes('shortened') || r.includes('redirect')) {

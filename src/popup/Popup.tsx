@@ -15,8 +15,8 @@ export const Popup: React.FC<PopupProps> = ({ onOpenDashboard, standalone = fals
   const chromeApi = getChromeApi();
   const runningInChrome = isRealExtension();
   const [settings, setSettings] = useState<ProtectionSettings | null>(null);
-  const [currentUrl, setCurrentUrl] = useState('https://github.com/microsoft/vscode');
-  const [currentTitle, setCurrentTitle] = useState('Microsoft VS Code - GitHub Repository');
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [currentTitle, setCurrentTitle] = useState('Active tab');
   const [siteScanResult, setSiteScanResult] = useState<ReturnType<typeof scanUrl> | null>(null);
   const [scanning, setScanning] = useState(false);
   const [recentBlocked, setRecentBlocked] = useState<ScanHistoryItem[]>([]);
@@ -92,12 +92,6 @@ export const Popup: React.FC<PopupProps> = ({ onOpenDashboard, standalone = fals
     }, 750);
   };
 
-  const handleUrlSimulation = (urlStr: string, titleStr: string) => {
-    setCurrentUrl(urlStr);
-    setCurrentTitle(titleStr);
-    setSiteScanResult(null);
-  };
-
   const handleOpenDashboard = () => {
     if (onOpenDashboard) {
       onOpenDashboard('overview');
@@ -145,33 +139,6 @@ export const Popup: React.FC<PopupProps> = ({ onOpenDashboard, standalone = fals
         </div>
       </div>
 
-      {/* Browser Host simulation panel (only shown if is inside preview wrapper to let developer test multiple sites!) */}
-      {!runningInChrome && (
-      <div className="p-3 bg-neutral-50/80 border-b border-neutral-150 flex items-center gap-1.5 justify-between">
-        <span className="text-[10px] font-mono font-medium text-neutral-400 uppercase select-none">Simulate active tab:</span>
-        <div className="flex gap-1">
-          <button
-            onClick={() => handleUrlSimulation('https://github.com/microsoft/vscode', 'VS Code codebase')}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${currentUrl.includes('github') ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white hover:bg-neutral-100 text-neutral-700'}`}
-          >
-            Repo
-          </button>
-          <button
-            onClick={() => handleUrlSimulation('https://paypal-payment-status.com/login/secure-security-update', 'PayPal Scam Mock')}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${currentUrl.includes('paypal') ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white hover:bg-neutral-100 text-neutral-700'}`}
-          >
-            Scam
-          </button>
-          <button
-            onClick={() => handleUrlSimulation('https://drive-google-job-brief.net/assessments/test-run.exe', 'Job Assessment Mock')}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-mono border ${currentUrl.includes('job-brief') ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white hover:bg-neutral-100 text-neutral-700'}`}
-          >
-            Job
-          </button>
-        </div>
-      </div>
-      )}
-
       <div className="overflow-y-auto flex-1 max-h-[440px] p-4 space-y-4">
         {/* URL site status bar */}
         <div className="p-3.5 rounded-lg border border-neutral-200/80 bg-neutral-50 flex items-center gap-3 relative overflow-hidden">
@@ -204,7 +171,7 @@ export const Popup: React.FC<PopupProps> = ({ onOpenDashboard, standalone = fals
           {!siteScanResult ? (
             <button
               onClick={handleScanPage}
-              disabled={scanning}
+              disabled={scanning || !currentUrl}
               className="w-full py-2 px-3 border border-neutral-900 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 disabled:border-neutral-400 transition-colors rounded-md text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Play className={`h-3 w-3 ${scanning ? 'animate-pulse' : ''}`} />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, LayoutDashboard, Search, Download, ClipboardList, Settings, Menu, X, ExternalLink } from 'lucide-react';
+import { isRealExtension } from '../lib/chrome';
 
 interface AppShellProps {
   currentTab: string;
@@ -17,6 +18,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onToggleSimulator,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const runningInChrome = isRealExtension();
 
   const navItems = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
@@ -56,6 +58,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {!runningInChrome && (
             <button
               onClick={onToggleSimulator}
               className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium border text-neutral-800 transition-all cursor-pointer ${
@@ -67,6 +70,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               <Shield className="h-3 w-3" />
               <span>{isSimulatorOpen ? 'Hide Extension Bubble' : 'Open Extension Bubble'}</span>
             </button>
+            )}
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -116,7 +120,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               </span>
               <p className="text-xs text-neutral-700 font-medium mt-1 inline-flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Active Simulator Mode</span>
+                <span>{runningInChrome ? 'Connected' : 'Active Preview Mode'}</span>
               </p>
             </div>
             
@@ -125,7 +129,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 Local Database Info
               </span>
               <p className="text-[10px] text-neutral-500 mt-1 leading-normal font-sans">
-                Toggles and alerts persist via simulated <code className="font-mono text-neutral-800">chrome.storage.local</code> real-time.
+                Toggles and alerts persist via <code className="font-mono text-neutral-800">chrome.storage.local</code> in real time.
               </p>
             </div>
           </div>
@@ -156,6 +160,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   </button>
                 );
               })}
+              {!runningInChrome && (
               <button
                 onClick={() => {
                   onToggleSimulator();
@@ -166,6 +171,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <Shield className="h-4 w-4 shrink-0 text-neutral-600" />
                 <span>{isSimulatorOpen ? 'Hide Extension Bubble' : 'Show Extension Bubble'}</span>
               </button>
+              )}
             </nav>
           </div>
         )}

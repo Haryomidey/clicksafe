@@ -6,7 +6,6 @@ import {
   saveDownloads,
   saveChecklist,
   addHistoryItem,
-  addDownloadItem,
   clearAllData
 } from '../lib/storage';
 import { ProtectionSettings, ScanHistoryItem, LoggedDownload, ChecklistItem } from '../types';
@@ -16,8 +15,6 @@ import { ToggleRow } from '../components/ToggleRow';
 import { EmptyState } from '../components/EmptyState';
 import { ActivityTable } from '../components/ActivityTable';
 import { UrlScanner } from '../components/UrlScanner';
-import { isRealExtension } from '../lib/chrome';
-import { scanDownloadedFile } from '../lib/scanner';
 import {
   Shield,
   ShieldAlert,
@@ -41,16 +38,12 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
-  const runningInChrome = isRealExtension();
   const [settings, setSettings] = useState<ProtectionSettings | null>(null);
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
   const [downloads, setDownloads] = useState<LoggedDownload[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Simulation parameters for downloads
-  const [simFilename, setSimFilename] = useState('');
-  const [simUrlInput, setSimUrlInput] = useState('');
   const [activeWarningItem, setActiveWarningItem] = useState<LoggedDownload | null>(null);
 
   // Settings Allowed / Blocked list inputs
@@ -113,36 +106,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
   const handleClearHistory = async () => {
     setHistory([]);
     await saveHistory([]);
-  };
-
-  const handleSimulateDownloadEvent = async (filename: string, sourceUrl: string) => {
-    if (!filename) return;
-    const scanResult = scanDownloadedFile(filename, sourceUrl, settings || undefined);
-    
-    let type: 'standard' | 'dangerous' | 'job' | 'developer' = 'standard';
-    if (scanResult.reasons.some(r => r.includes('Job Scam'))) type = 'job';
-    else if (scanResult.reasons.some(r => r.includes('developer secrets'))) type = 'developer';
-    else if (scanResult.reasons.some(r => r.includes('Dangerous extension'))) type = 'dangerous';
-
-    const newItem = await addDownloadItem({
-      filename,
-      url: sourceUrl,
-      fileSize: '4.8 MB',
-      riskScore: scanResult.score,
-      status: scanResult.status,
-      flaggedReasons: scanResult.reasons,
-      warningViewed: false,
-      type
-    });
-
-    setSimFilename('');
-    setSimUrlInput('');
-    await loadData();
-
-    // If file is caution or dangerous, immediately show simulated extension threat screen!
-    if (scanResult.status !== 'safe') {
-      setActiveWarningItem(newItem);
-    }
   };
 
   const handleAddAllowedDomain = async () => {
@@ -461,32 +424,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 Download Protection Sandbox
               </h2>
               <p className="text-xs text-neutral-500">
-                Simulate downloading files to experience physical endpoint warning blocks.
+                Chrome download events are monitored by the extension service worker and logged here when risk indicators are found.
               </p>
             </div>
-
-            {!runningInChrome && (
-            <div className="flex flex-wrap gap-2 text-xs font-mono">
-              <button
-                onClick={() => handleSimulateDownloadEvent('financial_ledger.xlsx', 'https://sharepoint.company.com/files/financial_ledger.xlsx')}
-                className="px-2.5 py-1.5 rounded border border-neutral-200 hover:border-neutral-950 bg-white cursor-pointer"
-              >
-                📥 Simulate Excel File
-              </button>
-              <button
-                onClick={() => handleSimulateDownloadEvent('interview_tasks.pdf.exe', 'https://drive-google-job-brief.net/recruit/test-run.exe')}
-                className="px-2.5 py-1.5 rounded border border-neutral-200 hover:border-neutral-950 bg-white cursor-pointer hover:bg-rose-50 hover:text-rose-700"
-              >
-                🚨 Simulate Job Assessment .exe
-              </button>
-              <button
-                onClick={() => handleSimulateDownloadEvent('credentials_secrets.env', 'https://github.com/profile/settings/.env')}
-                className="px-2.5 py-1.5 rounded border border-neutral-200 hover:border-neutral-955 bg-white cursor-pointer hover:bg-amber-50"
-              >
-                🔐 Simulate Secret Keys .env
-              </button>
-            </div>
-            )}
           </div>
 
           <div className="bg-white rounded-lg border border-neutral-200 p-5">
@@ -508,7 +448,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               <EmptyState
                 icon={FolderOpen}
                 title="No file downloads scanned yet"
-                description="Simulate downloads using the quick actions above to verify extension safety alerts."
+                description="Downloaded files that match risk indicators will appear here."
               />
             ) : (
               <div className="divide-y divide-neutral-100">
