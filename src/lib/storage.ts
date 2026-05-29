@@ -1,8 +1,23 @@
 import { getChromeApi } from './chrome';
 import { ProtectionSettings, ScanHistoryItem, LoggedDownload, ChecklistItem } from '../types';
-import { INITIAL_SETTINGS, INITIAL_CHECKLIST } from './constants';
+import { INITIAL_SETTINGS, INITIAL_CHECKLIST, STORAGE_VERSION } from './constants';
 
 const chromeApi = getChromeApi();
+
+const migrateStorage = async () => {
+  const data = await chromeApi.storage.local.get(['storageVersion', 'settings']);
+  if (data.storageVersion === STORAGE_VERSION) {
+    return;
+  }
+
+  await chromeApi.storage.local.set({
+    storageVersion: STORAGE_VERSION,
+    settings: data.settings || INITIAL_SETTINGS,
+    history: [],
+    downloads: [],
+    checklist: INITIAL_CHECKLIST
+  });
+};
 
 export const getStorageData = async (): Promise<{
   settings: ProtectionSettings;
@@ -10,6 +25,7 @@ export const getStorageData = async (): Promise<{
   downloads: LoggedDownload[];
   checklist: ChecklistItem[];
 }> => {
+  await migrateStorage();
   const data = await chromeApi.storage.local.get(['settings', 'history', 'downloads', 'checklist']);
   
   // Seed defaults if empty
@@ -82,6 +98,7 @@ export const addDownloadItem = async (item: Omit<LoggedDownload, 'id' | 'timesta
 
 export const clearAllData = async (): Promise<void> => {
   await chromeApi.storage.local.set({
+    storageVersion: STORAGE_VERSION,
     settings: INITIAL_SETTINGS,
     history: [],
     downloads: [],

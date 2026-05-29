@@ -1,49 +1,46 @@
-# ClickSafe – Security Audit & Verification Workflow
+# ClickSafe Verification Workflow
 
-This workflow guide documents the procedures for testing ClickSafe's protection metrics within our developer sandbox workspace.
+## Build And Load
 
----
+1. Run `pnpm run build`.
+2. Open `chrome://extensions`.
+3. Enable Developer Mode.
+4. Load the `dist` folder as an unpacked extension.
+5. Open the ClickSafe options page from the extension details or popup settings button.
 
-## 1. Automated Link Scanning Test Matrix
+## Link Interception
 
-Verify that our scanning engine rules produce identical classifications inside the interactive Link diagnostics pane:
+1. Visit any normal web page.
+2. Click a link that matches a risk rule, such as an HTTP sign-in URL, a shortened URL, a punycode domain, a blocked domain, or a direct executable URL.
+3. Expected behavior:
+   - Safe links open normally.
+   - Caution links ask before opening.
+   - Dangerous links are blocked before navigation.
+   - Risky link activity appears in the dashboard history.
 
-1. Navigate to **Link Scanner** tab via options sidebar.
-2. Under "test a preset simulation vector", click the pre-configured buttons:
-   * **Safe Site (GitHub)**:
-     * *Expected Status*: Safe (Score: 0/100)
-     * *Recommended Action*: Approved link indication.
-   * **Phishing Spoof (PayPal Mimic)**:
-     * *Expected Status*: Dangerous (Score: 85/100)
-     * *Flagged reasons*: Phishing keywords inside host structure, HTTP unencrypted warning.
-   * **Fake Recruiter assessment (Job Scam)**:
-     * *Expected Status*: Dangerous (Score: 95/100)
-     * *Flagged reasons*: Direct executable .exe download, Google Drive brand spoofing, Fake Job scam assessment keywords.
+## Manual Link Scanner
 
----
+1. Open the options dashboard.
+2. Go to Link Scanner.
+3. Enter any URL and run the scan.
+4. Expected behavior:
+   - The result uses current shield settings, allowed domains, blocked domains, and strict mode.
+   - The scan is added to history.
 
-## 2. File Download Safety Intercept Test
+## Download Protection
 
-Test the physical warning modals which trigger whenever an unverified dangerous file is downloaded:
+1. Keep Download Extension Monitor enabled.
+2. Download a file whose filename or source URL matches a risky rule.
+3. Expected behavior:
+   - The background service worker scans the Chrome download event.
+   - Risky downloads appear in File Protection.
+   - The extension badge shows an alert marker.
 
-1. Go to **File Protection** page via options sidebar.
-2. Click **Simulate Job Assessment .exe** button:
-   * **Expected Action**: High contrast warning modal opens.
-   * **Warning Copy Check**: Re-audit whether warning message displays: *"This feels like a job-related file... Attackers often use fake job offers to spread malware."*
-3. Click "Isolate File":
-   * **Expected Action**: The warning closes, and the file is deleted from our tracked list.
-4. Click **Simulate Secret Keys .env** button:
-   * **Expected Action**: Warning modal opens with developer secret target indicators.
+## Settings
 
----
-
-## 3. Options Settings & Toggles Matrix
-
-Confirm that turning off a protective layer correctly toggles real-time scanners:
-
-1. Go to **Shield Settings** tab via sidebar.
-2. Deactivate **Anti Job Scam Shield** toggle.
-3. Head over to **Link Scanner** tab and re-test **Fake Recruiter assessment (Job Scam)** preset:
-   * **Expected Action**: The risk score drops because job-scam penalties are bypassed, changing safety label from "Dangerous" to "Caution".
-4. Return to **Shield Settings** and click **Reset databases & clear history log**:
-   * **Expected Action**: Resets custom whitelists, restore core databases, and seeds default alerts history.
+1. Add a domain to the block list.
+2. Click or scan a URL from that domain.
+3. Expected behavior: it is treated as dangerous.
+4. Add a domain to the allow list.
+5. Click or scan a URL from that domain.
+6. Expected behavior: allow-listed domains avoid heuristic noise unless direct file risk still applies.

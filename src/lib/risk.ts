@@ -32,6 +32,20 @@ export const evaluateRisk = (reasons: string[], isFileDownload = false): RiskEva
       score += 45;
     } else if (r.includes('blocked list')) {
       score += 100;
+    } else if (r.includes('username/password marker')) {
+      score += 45;
+    } else if (r.includes('raw ip address')) {
+      score += 25;
+    } else if (r.includes('non-standard network port')) {
+      score += 15;
+    } else if (r.includes('not an official')) {
+      score += 45;
+    } else if (r.includes('query parameter') && r.includes('dangerous file extension')) {
+      score += 70;
+    } else if (r.includes('redirect parameter') && r.includes('risky destination')) {
+      score += 45;
+    } else if (r.includes('invisible') || r.includes('direction-changing')) {
+      score += 50;
     } else if (r.includes('strict mode')) {
       score += 25;
     } else if (r.includes('insecure http') || r.includes('no encryption')) {
@@ -40,8 +54,10 @@ export const evaluateRisk = (reasons: string[], isFileDownload = false): RiskEva
       score += 25;
     } else if (r.includes('too many subdomains') || r.includes('nested')) {
       score += 20;
+    } else if (r.includes('direct url executable download')) {
+      score += 70;
     } else if (r.includes('dangerous extension') || r.includes('executable')) {
-      score += 55;
+      score += 70;
     } else if (r.includes('fake cloud storage') || r.includes('drive mimic')) {
       score += 40;
     } else if (r.includes('credential request') || r.includes('developer secret')) {

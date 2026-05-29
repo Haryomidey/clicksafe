@@ -26,6 +26,76 @@ const OFFICIAL_DEVELOPER_DOMAINS = [
   'bitbucket.org'
 ];
 
+const BRAND_DOMAINS: Record<string, string[]> = {
+  paypal: ['paypal.com'],
+  google: ['google.com', 'googleusercontent.com', 'gstatic.com', 'youtube.com'],
+  microsoft: ['microsoft.com', 'live.com', 'office.com', 'office365.com', 'sharepoint.com', 'windows.com'],
+  apple: ['apple.com', 'icloud.com'],
+  amazon: ['amazon.com', 'amazonaws.com'],
+  facebook: ['facebook.com', 'fb.com', 'meta.com'],
+  instagram: ['instagram.com'],
+  netflix: ['netflix.com'],
+  github: ['github.com', 'githubusercontent.com'],
+  npm: ['npmjs.com', 'npmjs.org']
+};
+
+const REDIRECT_PARAM_NAMES = [
+  'url', 'u', 'uri', 'redirect', 'redirect_url', 'redirect_uri', 'next',
+  'continue', 'target', 'to', 'dest', 'destination', 'return', 'returnurl',
+  'return_url', 'callback', 'checkout_url', 'download', 'file', 'filename'
+];
+
+const CONTROL_AND_DIRECTIONAL_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
+const HAS_CONTROL_OR_DIRECTIONAL_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/;
+
+const safeDecode = (value: string) => {
+  let decoded = value;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      break;
+    }
+  }
+  return decoded;
+};
+
+const normalizeForInspection = (value: string) => {
+  return safeDecode(value)
+    .replace(CONTROL_AND_DIRECTIONAL_CHARS, '')
+    .replace(/\\/g, '/')
+    .trim()
+    .toLowerCase();
+};
+
+const stripFilenameNoise = (value: string) => {
+  return normalizeForInspection(value)
+    .split(/[?#]/)[0]
+    .replace(/["'()[\]{}<>]/g, '')
+    .replace(/[\s.]+$/g, '');
+};
+
+const findDangerousExtension = (value: string) => {
+  const cleaned = stripFilenameNoise(value);
+  return DANGEROUS_EXTENSIONS.find((ext) => {
+    return cleaned.endsWith(ext) || cleaned.includes(`${ext}/`) || cleaned.includes(`${ext}.`);
+  });
+};
+
+const looksLikeUrl = (value: string) => {
+  return /^https?:\/\//i.test(safeDecode(value).trim());
+};
+
+const isIpAddressHost = (host: string) => {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || /^\[[0-9a-f:]+\]$/i.test(host);
+};
+
+const isOfficialBrandDomain = (host: string, domains: string[]) => {
+  return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+};
+
 /**
  * Clean and parse URL for scanning
  */
@@ -49,7 +119,7 @@ const hostMatchesDomain = (host: string, domain: string) => {
 /**
  * Scan a URL against all protection algorithms
  */
-export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): RiskEvaluation => {
+export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, depth = 0): RiskEvaluation => {
   const reasons: string[] = [];
   const cleanUrl = rawUrlString.trim();
   
@@ -62,9 +132,10 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
     return evaluateRisk(['Invalid URL format. This link cannot be resolved.']);
   }
 
-  const host = urlObj.hostname.toLowerCase();
-  const path = urlObj.pathname.toLowerCase();
-  const search = urlObj.search.toLowerCase();
+  const host = normalizeForInspection(urlObj.hostname);
+  const path = normalizeForInspection(urlObj.pathname);
+  const search = normalizeForInspection(urlObj.search);
+  const fullUrlText = normalizeForInspection(urlObj.href);
   const protocol = urlObj.protocol.toLowerCase();
 
   const isAllowed = settings?.allowedDomains?.some((domain) => hostMatchesDomain(host, domain));
@@ -72,6 +143,18 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
 
   if (isBlocked) {
     reasons.push('Domain is on your ClickSafe blocked list.');
+  }
+
+  if ((urlObj.username || urlObj.password) && !isAllowed) {
+    reasons.push('URL hides the real destination after a username/password marker.');
+  }
+
+  if (isIpAddressHost(host) && !isAllowed) {
+    reasons.push('Uses a raw IP address instead of a recognizable domain.');
+  }
+
+  if (urlObj.port && !['80', '443'].includes(urlObj.port) && !isAllowed) {
+    reasons.push(`Uses a non-standard network port (${urlObj.port}).`);
   }
 
   // 1. Protocol Evaluation (HTTP vs HTTPS)
@@ -89,6 +172,12 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
   if ((host.startsWith('xn--') || host.includes('.xn--')) && !isAllowed) {
     reasons.push('Punycode domain detected (potential homograph attack to mimic trusted brands).');
   }
+
+  Object.entries(BRAND_DOMAINS).forEach(([brand, officialDomains]) => {
+    if (host.includes(brand) && !isOfficialBrandDomain(host, officialDomains) && !isAllowed) {
+      reasons.push(`Domain references ${brand} but is not an official ${brand} domain.`);
+    }
+  });
 
   // 4. Subdomains inspection
   const hostParts = host.split('.').filter(p => p !== 'www');
@@ -108,7 +197,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
   // 6. Job Scam keywords
   const containsJobKeyword = FAKE_JOB_KEYWORDS.some(kw => {
     const pattern = new RegExp(kw.replace(/\s+/g, '[\\s\\-_/]*'), 'i');
-    return pattern.test(path) || pattern.test(search) || pattern.test(host);
+    return pattern.test(path) || pattern.test(search) || pattern.test(host) || pattern.test(fullUrlText);
   });
   if (containsJobKeyword && settings?.fakeJobWarnings !== false && !isAllowed) {
     reasons.push('Fake Job Scam indicators (page requests tasks, command executions, or download-briefs).');
@@ -119,7 +208,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
     // Escape dots for regex
     const escaped = kw.replace(/\./g, '\\.');
     const pattern = new RegExp(escaped, 'i');
-    return pattern.test(path) || pattern.test(search);
+    return pattern.test(path) || pattern.test(search) || pattern.test(fullUrlText);
   });
   if (containsDevKeyword) {
     // Exclude legitimate developer portals to avoid high false positives
@@ -144,12 +233,27 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
   }
 
   // 9. Unusual files in URL
-  const hasDangerousExt = DANGEROUS_EXTENSIONS.some(ext => {
-    return path.endsWith(ext) || path.includes(ext + '?') || path.includes(ext + '/');
-  });
-  if (hasDangerousExt) {
-    const matchedExt = DANGEROUS_EXTENSIONS.find(ext => path.includes(ext));
+  const pathFilename = path.split('/').pop() || path;
+  const matchedExt = findDangerousExtension(pathFilename) || findDangerousExtension(path);
+  if (matchedExt) {
     reasons.push(`Direct URL executable download (${matchedExt}) which can run system-level commands.`);
+  }
+
+  for (const [name, value] of urlObj.searchParams.entries()) {
+    const normalizedName = normalizeForInspection(name);
+    const normalizedValue = normalizeForInspection(value);
+    const queryExt = findDangerousExtension(normalizedValue);
+
+    if (queryExt) {
+      reasons.push(`Query parameter "${normalizedName}" references a dangerous file extension (${queryExt}).`);
+    }
+
+    if (depth < 1 && REDIRECT_PARAM_NAMES.includes(normalizedName) && looksLikeUrl(value)) {
+      const nestedRisk = scanUrl(value, settings, depth + 1);
+      if (nestedRisk.status !== 'safe') {
+        reasons.push(`Redirect parameter "${normalizedName}" points to a risky destination.`);
+      }
+    }
   }
 
   if (settings?.strictMode && !isAllowed && reasons.length === 0) {
@@ -164,13 +268,16 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings): Ri
  */
 export const scanDownloadedFile = (filename: string, sourceUrl: string, settings?: ProtectionSettings): RiskEvaluation => {
   const reasons: string[] = [];
-  const lowercaseFile = filename.toLowerCase();
+  const lowercaseFile = normalizeForInspection(filename);
 
   // 1. Check dangerous extension
-  const hasDangerousExt = DANGEROUS_EXTENSIONS.some(ext => lowercaseFile.endsWith(ext));
-  if (hasDangerousExt) {
-    const ext = DANGEROUS_EXTENSIONS.find(e => lowercaseFile.endsWith(e)) || '';
+  const ext = findDangerousExtension(lowercaseFile);
+  if (ext) {
     reasons.push(`Dangerous extension (${ext}) that can execute code, scripts, or modify settings.`);
+  }
+
+  if (HAS_CONTROL_OR_DIRECTIONAL_CHARS.test(filename)) {
+    reasons.push('Filename contains invisible or direction-changing characters used to disguise extensions.');
   }
 
   // 2. Check Job Scam related downloads

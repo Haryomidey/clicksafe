@@ -6,7 +6,7 @@
 import { scanDownloadedFile } from '../lib/scanner';
 import { getChromeApi } from '../lib/chrome';
 import { ProtectionSettings, LoggedDownload } from '../types';
-import { INITIAL_SETTINGS } from '../lib/constants';
+import { INITIAL_SETTINGS, STORAGE_VERSION } from '../lib/constants';
 
 const chromeApi = getChromeApi();
 
@@ -14,12 +14,14 @@ const chromeApi = getChromeApi();
 chromeApi.runtime.onInstalled?.addListener(async () => {
   console.log('ClickSafe Protection Engine Booted successfully.');
   
-  const saved = await chromeApi.storage.local.get(['settings']);
-  if (!saved.settings) {
+  const saved = await chromeApi.storage.local.get(['storageVersion', 'settings']);
+  if (saved.storageVersion !== STORAGE_VERSION) {
     await chromeApi.storage.local.set({
-      settings: INITIAL_SETTINGS,
+      storageVersion: STORAGE_VERSION,
+      settings: saved.settings || INITIAL_SETTINGS,
       history: [],
-      downloads: []
+      downloads: [],
+      checklist: []
     });
   }
 });
@@ -42,6 +44,9 @@ chromeApi.downloads?.onCreated?.addListener(async (downloadItem) => {
   if (fileScore.status !== 'safe') {
     // Flagged as threat
     console.warn(`[ClickSafe Shield] BLOCK WARNING: Flagged download file [${filename}] - Risk Score: ${fileScore.score}`);
+    if (fileScore.status === 'dangerous') {
+      await chromeApi.downloads?.cancel?.(downloadItem.id);
+    }
     
     let type: 'standard' | 'dangerous' | 'job' | 'developer' = 'dangerous';
     if (fileScore.reasons.some(r => r.includes('Job Scam'))) type = 'job';
@@ -56,7 +61,7 @@ chromeApi.downloads?.onCreated?.addListener(async (downloadItem) => {
       riskScore: fileScore.score,
       status: fileScore.status,
       flaggedReasons: fileScore.reasons,
-      warningViewed: false,
+      warningViewed: fileScore.status === 'dangerous',
       type
     };
 

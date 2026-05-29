@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resume Test Page</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="resume">
+      <section class="hero">
+        <p class="eyebrow">Resume</p>
+        <h1>Alex Morgan</h1>
+        <p class="role">Frontend Engineer</p>
+        <p class="summary">
+          I build accessible, fast, and maintainable browser experiences with
+          React, TypeScript, and modern CSS.
+        </p>
+        <a class="download" href="./test.cv" download="test.exe">
+          Download CV
+        </a>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>Experience</h2>
+          <ul>
+            <li>Built production React interfaces for SaaS dashboards.</li>
+            <li>Improved Core Web Vitals through bundle and rendering fixes.</li>
+            <li>Created reusable component systems with strong accessibility.</li>
+          </ul>
+        </article>
+
+        <article>
+          <h2>Skills</h2>
+          <div class="tags">
+            <span>React</span>
+            <span>TypeScript</span>
+            <span>Tailwind CSS</span>
+            <span>Vite</span>
+            <span>Chrome Extensions</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="edge-cases">
+        <h2>Masked Link Tests</h2>
+        <div class="test-links">
+          <a href="./test.cv" download="test.exe">Hidden download filename</a>
+          <a href="./test%2Eexe">Encoded executable path</a>
+          <a href="https://paypal.com@127.0.0.1:5500/test/test.cv">Username marker trick</a>
+          <a href="https://google-drive-download.localhost/test.cv?file=resume.exe">Brand mimic query file</a>
+          <a href="blob:null/12345" download="portfolio.pdf.exe">Blob download disguise</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

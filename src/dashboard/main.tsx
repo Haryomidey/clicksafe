@@ -8,7 +8,7 @@ const OptionsApp = () => {
   const [tab, setTab] = useState('overview');
 
   return (
-    <AppShell currentTab={tab} onTabChange={setTab} isSimulatorOpen={false} onToggleSimulator={() => {}}>
+    <AppShell currentTab={tab} onTabChange={setTab}>
       <Dashboard currentTab={tab} />
     </AppShell>
   );

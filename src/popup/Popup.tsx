@@ -298,7 +298,7 @@ export const Popup: React.FC<PopupProps> = ({ onOpenDashboard, standalone = fals
       {/* Popup Footer */}
       {(onOpenDashboard || runningInChrome) && (
         <div className="border-t border-neutral-150 p-2.5 bg-neutral-50 px-4 flex justify-between items-center text-[10px] font-mono shrink-0">
-          <span className="text-neutral-400">Status: {runningInChrome ? 'Chrome Extension' : 'Secure Local Sandbox'}</span>
+          <span className="text-neutral-400">Status: {runningInChrome ? 'Chrome Extension' : 'Browser Fallback'}</span>
           <button
             onClick={handleOpenDashboard}
             className="text-neutral-900 hover:text-neutral-700 underline flex items-center gap-1 cursor-pointer font-semibold"

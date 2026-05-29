@@ -66,7 +66,7 @@ export const UrlScanner: React.FC<UrlScannerProps> = ({ onScanCompleted, setting
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste URL to analyze e.g. http://login.verify-secure-update.com"
+          placeholder="Paste URL to analyze"
           className="flex-1 px-3 py-2 text-xs font-mono rounded-md border border-neutral-200 focus:outline-hidden focus:border-neutral-900 bg-neutral-50/20 w-full"
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleScan(url);

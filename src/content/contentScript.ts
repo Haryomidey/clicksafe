@@ -3,10 +3,11 @@
  * Runs on every matched page and scans links before navigation is allowed.
  */
 
-import { scanUrl } from '../lib/scanner';
+import { scanDownloadedFile, scanUrl } from '../lib/scanner';
 import { getChromeApi } from '../lib/chrome';
 import { ProtectionSettings, ScanHistoryItem } from '../types';
 import { INITIAL_SETTINGS } from '../lib/constants';
+import { evaluateRisk } from '../lib/risk';
 
 const chromeApi = getChromeApi();
 let scannedLinks = new WeakMap<HTMLAnchorElement, string>();
@@ -72,33 +73,28 @@ const canInspectUrl = (url: string) => {
   return /^https?:\/\//i.test(url);
 };
 
-const blockEvent = (event: Event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+const scanAnchor = (anchor: HTMLAnchorElement, settings: ProtectionSettings) => {
+  const urlResult = canInspectUrl(anchor.href)
+    ? scanUrl(anchor.href, settings)
+    : evaluateRisk([]);
+  const downloadName = anchor.getAttribute('download')?.trim();
+
+  if (!downloadName) {
+    return urlResult;
+  }
+
+  const downloadResult = scanDownloadedFile(downloadName, anchor.href, settings);
+  if (downloadResult.score <= urlResult.score) {
+    return urlResult;
+  }
+
+  return downloadResult;
 };
 
-const inspectNavigation = (event: MouseEvent) => {
-  const anchor = findAnchor(event.target);
-  if (!anchor || !anchor.href || !canInspectUrl(anchor.href)) {
-    return;
-  }
-
-  const settings = cachedSettings;
-  if (!settings.linkProtection) {
-    return;
-  }
-
-  const result = scanUrl(anchor.href, settings);
-  if (result.status === 'safe') {
-    return;
-  }
-
-  blockEvent(event);
-
-  const message = [
-    `ClickSafe scanned this link before opening:`,
-    anchor.href,
+const getNavigationMessage = (target: string, result: ReturnType<typeof scanUrl>) => {
+  return [
+    'ClickSafe scanned this link before opening:',
+    target,
     '',
     `Risk: ${result.status.toUpperCase()} (${result.score}/100)`,
     ...result.reasons.map((reason) => `- ${reason}`),
@@ -107,6 +103,33 @@ const inspectNavigation = (event: MouseEvent) => {
       ? 'This navigation was blocked.'
       : 'Open this link anyway?',
   ].join('\n');
+};
+
+const blockEvent = (event: Event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+};
+
+const inspectNavigation = (event: MouseEvent) => {
+  const anchor = findAnchor(event.target);
+  if (!anchor || !anchor.href) {
+    return;
+  }
+
+  const settings = cachedSettings;
+  if (!settings.linkProtection) {
+    return;
+  }
+
+  const result = scanAnchor(anchor, settings);
+  if (result.status === 'safe') {
+    return;
+  }
+
+  blockEvent(event);
+
+  const message = getNavigationMessage(anchor.href, result);
 
   if (result.status === 'dangerous') {
     void logScan(anchor.href, result, 'blocked');
@@ -132,12 +155,13 @@ const markSuspiciousLinks = async () => {
   }
 
   document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((link) => {
-    if (!link.href || !canInspectUrl(link.href) || scannedLinks.get(link) === link.href) {
+    const cacheKey = `${link.href}|${link.getAttribute('download') || ''}`;
+    if (!link.href || scannedLinks.get(link) === cacheKey) {
       return;
     }
 
-    scannedLinks.set(link, link.href);
-    const result = scanUrl(link.href, settings);
+    scannedLinks.set(link, cacheKey);
+    const result = scanAnchor(link, settings);
     if (result.status === 'safe') {
       return;
     }
@@ -157,6 +181,64 @@ const markSuspiciousLinks = async () => {
   });
 };
 
+const inspectFormSubmit = (event: SubmitEvent) => {
+  const form = event.target instanceof HTMLFormElement ? event.target : null;
+  if (!form || !form.action || !canInspectUrl(form.action)) {
+    return;
+  }
+
+  const settings = cachedSettings;
+  if (!settings.linkProtection) {
+    return;
+  }
+
+  const result = scanUrl(form.action, settings);
+  if (result.status === 'safe') {
+    return;
+  }
+
+  blockEvent(event);
+  const message = getNavigationMessage(form.action, result);
+
+  if (result.status === 'dangerous') {
+    void logScan(form.action, result, 'blocked');
+    alert(message);
+    return;
+  }
+
+  const proceed = confirm(message);
+  void logScan(form.action, result, proceed ? 'warned' : 'blocked');
+  if (proceed) {
+    form.submit();
+  }
+};
+
+const wrapWindowOpen = () => {
+  const nativeOpen = window.open.bind(window);
+  window.open = (url?: string | URL, target?: string, features?: string) => {
+    const targetUrl = url?.toString() || '';
+    if (!targetUrl || !canInspectUrl(targetUrl) || !cachedSettings.linkProtection) {
+      return nativeOpen(url, target, features);
+    }
+
+    const result = scanUrl(targetUrl, cachedSettings);
+    if (result.status === 'safe') {
+      return nativeOpen(url, target, features);
+    }
+
+    const message = getNavigationMessage(targetUrl, result);
+    if (result.status === 'dangerous') {
+      void logScan(targetUrl, result, 'blocked');
+      alert(message);
+      return null;
+    }
+
+    const proceed = confirm(message);
+    void logScan(targetUrl, result, proceed ? 'warned' : 'blocked');
+    return proceed ? nativeOpen(url, target, features) : null;
+  };
+};
+
 if (typeof document !== 'undefined') {
   void refreshSettings();
   chromeApi.storage?.onChanged?.addListener?.((changes: Record<string, { newValue?: ProtectionSettings }>, areaName: string) => {
@@ -170,15 +252,27 @@ if (typeof document !== 'undefined') {
   document.addEventListener('click', inspectNavigation, true);
 
   document.addEventListener('auxclick', inspectNavigation, true);
+  document.addEventListener('submit', inspectFormSubmit, true);
+  wrapWindowOpen();
 
   markSuspiciousLinks();
 
-  const observer = new MutationObserver(() => {
-    void markSuspiciousLinks();
-  });
+  const startObserver = () => {
+    const root = document.documentElement || document.body;
+    if (!root) {
+      window.setTimeout(startObserver, 25);
+      return;
+    }
 
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
+    const observer = new MutationObserver(() => {
+      void markSuspiciousLinks();
+    });
+
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+    });
+  };
+
+  startObserver();
 }

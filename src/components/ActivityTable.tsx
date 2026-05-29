@@ -175,7 +175,7 @@ export const ActivityTable: React.FC<ActivityTableProps> = ({
                             <span className="text-[10px] font-mono text-neutral-400">
                               {formatDate(item.timestamp)}
                             </span>
-                            <span className="text-[10px] text-neutral-300">•</span>
+                            <span className="text-[10px] text-neutral-300">-</span>
                             <span className="text-[10px] font-mono text-neutral-500 capitalize">
                               {getFriendlyType(item.type)}
                             </span>
@@ -260,7 +260,7 @@ export const ActivityTable: React.FC<ActivityTableProps> = ({
                           key={i}
                           className="text-xs font-sans text-neutral-700 bg-white border border-neutral-150 p-2 rounded-md flex items-start gap-1.5"
                         >
-                          <span className="text-rose-600 text-xs mt-0.5">•</span>
+                          <span className="text-rose-600 text-xs mt-0.5">-</span>
                           <span className="leading-tight">{r}</span>
                         </div>
                       ))}

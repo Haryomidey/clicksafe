@@ -31,7 +31,6 @@ import {
   ArrowRight,
   Info
 } from 'lucide-react';
-import { SAFETY_TIPS } from '../lib/constants';
 
 interface DashboardProps {
   currentTab: string;
@@ -52,6 +51,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
 
   // Loaded details toggle
   const [activeChecklistFilter, setActiveChecklistFilter] = useState<'all' | 'links' | 'jobs' | 'downloads' | 'dev'>('all');
+  const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  const [newChecklistDescription, setNewChecklistDescription] = useState('');
+  const [newChecklistCategory, setNewChecklistCategory] = useState<ChecklistItem['category']>('links');
 
   const loadData = async () => {
     try {
@@ -70,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
   useEffect(() => {
     loadData();
 
-    // Sync storage events in preview sandbox
+    // Sync storage events when running outside the extension options page.
     const syncState = () => {
       loadData();
     };
@@ -93,6 +95,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       }
       return item;
     });
+    setChecklist(updated);
+    await saveChecklist(updated);
+  };
+
+  const handleAddChecklistItem = async () => {
+    const title = newChecklistTitle.trim();
+    const description = newChecklistDescription.trim();
+    if (!title || !description) return;
+
+    const updated: ChecklistItem[] = [
+      {
+        id: `c_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        category: newChecklistCategory,
+        title,
+        description,
+        checked: false
+      },
+      ...checklist
+    ];
+
+    setChecklist(updated);
+    await saveChecklist(updated);
+    setNewChecklistTitle('');
+    setNewChecklistDescription('');
+  };
+
+  const handleRemoveChecklistItem = async (id: string) => {
+    const updated = checklist.filter((item) => item.id !== id);
     setChecklist(updated);
     await saveChecklist(updated);
   };
@@ -177,10 +207,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
   const suspiciousLinksCount = history.filter((h) => h.status === 'caution').length;
   const dangerousBlockedLinksCount = history.filter((h) => h.status === 'dangerous').length;
   const dangerousDownloadsCount = downloads.filter((d) => d.status === 'dangerous').length;
+  const activeShieldCount = [
+    settings.linkProtection,
+    settings.downloadMonitoring,
+    settings.fakeJobWarnings,
+    settings.developerProtection,
+    settings.strictMode
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-6">
-      {/* Simulation Warning Floating Banner inside development */}
+      {/* Download warning details */}
       {activeWarningItem && (
         <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-lg border border-neutral-200 shadow-2xl max-w-lg w-full p-6 relative">
@@ -215,12 +252,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 </p>
                 {activeWarningItem.type === 'job' && (
                   <p className="text-[11px] text-rose-750 font-serif leading-snug pt-1.5 border-t border-rose-200/50">
-                    “This looks like a job-related file or link. Attackers often use fake job offers (e.g., mock recruiter coding briefs) to trick people into running malware.”
+                    This looks like a job-related file or link. Attackers often use fake job offers to trick people into running malware.
                   </p>
                 )}
                 {activeWarningItem.type === 'developer' && (
                   <p className="text-[11px] text-rose-750 font-serif leading-snug pt-1.5 border-t border-rose-200/50">
-                    “Warn: Developer credentials threat detected. File attempts to index .env keys, github credentials, or security configurations.”
+                    Warn: Developer credentials threat detected. File attempts to index .env keys, github credentials, or security configurations.
                   </p>
                 )}
               </div>
@@ -230,7 +267,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 <div className="space-y-1">
                   {activeWarningItem.flaggedReasons.map((reason, idx) => (
                     <div key={idx} className="text-[11px] font-sans flex items-start gap-1 p-2 bg-neutral-50 border border-neutral-150 rounded">
-                      <span className="text-rose-600 block leading-none">•</span>
+                      <span className="text-rose-600 block leading-none">-</span>
                       <span>{reason}</span>
                     </div>
                   ))}
@@ -253,7 +290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               </button>
               <button
                 onClick={() => {
-                  // Simulate deleting / isolating the file
+                  // Remove the flagged file record from the local registry.
                   const filteredList = downloads.filter(d => d.id !== activeWarningItem.id);
                   setDownloads(filteredList);
                   saveDownloads(filteredList);
@@ -261,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 }}
                 className="px-4 py-2 border border-neutral-200 bg-white hover:text-rose-700 hover:border-rose-300 rounded text-neutral-700 cursor-pointer"
               >
-                Isolate file (Simulated deletion)
+                Remove file record
               </button>
             </div>
           </div>
@@ -275,7 +312,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
           <div className="p-6 bg-white border border-neutral-200 rounded-lg shadow-xs flex flex-col md:flex-row items-start justify-between gap-6">
             <div className="space-y-1 md:max-w-xl">
               <h2 className="text-xl font-bold tracking-tight text-neutral-900">
-                Local Security Sandbox Console
+                Local Security Console
               </h2>
               <p className="text-xs text-neutral-500 leading-relaxed font-sans">
                 ClickSafe protects you directly from your browser utilizing local heuristic databases. It inspects links, protects your developer credentials from being leaked, block fake recruitment task scams, and logs file download extensions safely.
@@ -315,11 +352,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               trend={{ value: 'Protected', label: 'Execution prevented', isPositive: true }}
             />
             <StatCard
-              title="Active Rules"
-              value={Object.values(settings).filter(v => v === true).length + 15}
+              title="Active Shields"
+              value={activeShieldCount}
               icon={ClipboardList}
-              description="Active threat databases and protocol checkers"
-              trend={{ value: 'Shield Enabled', label: 'Real-time protection', isPositive: true }}
+              description="Enabled protection modules"
+              trend={{ value: `${settings.blockedDomains.length} blocked`, label: `${settings.allowedDomains.length} allowed`, isPositive: true }}
             />
           </div>
 
@@ -330,26 +367,51 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
             onClearAll={handleClearHistory}
           />
 
-          {/* Lower layout grid: Safety Tips & Quick settings summary */}
+          {/* Lower layout grid: current configuration summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-lg border border-neutral-200 p-5 md:col-span-2 space-y-4">
               <h3 className="text-sm font-semibold text-neutral-950 font-sans pb-2 border-b border-neutral-100">
-                ClickSafe Anti-Phishing Advisory & Tips
+                Current Domain Rules
               </h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {SAFETY_TIPS.map((tip, index) => (
-                  <div key={index} className="p-3 bg-neutral-50 rounded border border-neutral-150 flex flex-col justify-between">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-neutral-900 leading-tight">
-                        {tip.title}
-                      </h4>
-                      <p className="text-[10px] text-neutral-500 font-sans mt-1.5 leading-relaxed">
-                        {tip.description}
-                      </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-3 bg-neutral-50 rounded border border-neutral-150">
+                  <h4 className="text-[11px] font-bold text-neutral-900 leading-tight">
+                    Allowed Domains
+                  </h4>
+                  {settings.allowedDomains.length === 0 ? (
+                    <p className="text-[10px] text-neutral-500 font-sans mt-1.5 leading-relaxed">
+                      No allowed domains have been added.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {settings.allowedDomains.slice(0, 8).map((domain) => (
+                        <span key={domain} className="px-1.5 py-0.5 rounded bg-white border border-neutral-200 text-[10px] font-mono text-neutral-700">
+                          {domain}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
+
+                <div className="p-3 bg-neutral-50 rounded border border-neutral-150">
+                  <h4 className="text-[11px] font-bold text-neutral-900 leading-tight">
+                    Blocked Domains
+                  </h4>
+                  {settings.blockedDomains.length === 0 ? (
+                    <p className="text-[10px] text-neutral-500 font-sans mt-1.5 leading-relaxed">
+                      No blocked domains have been added.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {settings.blockedDomains.slice(0, 8).map((domain) => (
+                        <span key={domain} className="px-1.5 py-0.5 rounded bg-white border border-rose-100 text-[10px] font-mono text-rose-700">
+                          {domain}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -384,7 +446,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               <div className="p-3 bg-neutral-900 text-white rounded border border-neutral-800 flex items-center gap-1.5 mt-4">
                 <Info className="h-4 w-4 shrink-0 text-amber-400" />
                 <p className="text-[9px] font-mono leading-tight">
-                  No active server backend is required. Absolute security through local sandbox runtime.
+                  No server backend is required. Scans and settings stay in local browser storage.
                 </p>
               </div>
             </div>
@@ -421,7 +483,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
           <div className="bg-white rounded-lg border border-neutral-200 p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             <div className="space-y-1">
               <h2 className="text-md font-bold tracking-tight text-neutral-900">
-                Download Protection Sandbox
+                Download Protection
               </h2>
               <p className="text-xs text-neutral-500">
                 Chrome download events are monitored by the extension service worker and logged here when risk indicators are found.
@@ -468,7 +530,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                       </p>
                       <p className="text-[9px] font-mono mt-1 text-neutral-500 uppercase tracking-widest gap-2 flex flex-wrap">
                         <span>Size: {item.fileSize || 'N/A'}</span>
-                        <span>•</span>
+                        <span>-</span>
                         <span>Scanned: {new Date(item.timestamp).toLocaleTimeString()}</span>
                       </p>
                     </div>
@@ -506,6 +568,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
           </div>
 
           <div className="bg-white border border-neutral-200 rounded-lg p-5">
+            <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr_auto] gap-2 pb-5 border-b border-neutral-150 mb-5">
+              <select
+                value={newChecklistCategory}
+                onChange={(e) => setNewChecklistCategory(e.target.value as ChecklistItem['category'])}
+                className="px-3 py-2 text-xs font-mono rounded border border-neutral-200 bg-neutral-50/25 focus:outline-hidden focus:border-neutral-900"
+              >
+                <option value="links">Links</option>
+                <option value="jobs">Jobs</option>
+                <option value="downloads">Downloads</option>
+                <option value="dev">Developer</option>
+              </select>
+              <input
+                type="text"
+                value={newChecklistTitle}
+                onChange={(e) => setNewChecklistTitle(e.target.value)}
+                placeholder="Checklist item"
+                className="px-3 py-2 text-xs font-mono rounded border border-neutral-200 bg-neutral-50/25 focus:outline-hidden focus:border-neutral-900"
+              />
+              <input
+                type="text"
+                value={newChecklistDescription}
+                onChange={(e) => setNewChecklistDescription(e.target.value)}
+                placeholder="Why this matters"
+                className="px-3 py-2 text-xs font-mono rounded border border-neutral-200 bg-neutral-50/25 focus:outline-hidden focus:border-neutral-900"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddChecklistItem(); }}
+              />
+              <button
+                onClick={handleAddChecklistItem}
+                className="px-3 py-2 text-xs font-mono bg-neutral-900 text-white rounded cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add
+              </button>
+            </div>
+
             {/* Checklist Category Nav */}
             <div className="flex flex-wrap gap-1.5 pb-4 border-b border-neutral-150 mb-5">
               {(['all', 'links', 'jobs', 'downloads', 'dev'] as const).map((filter) => (
@@ -525,9 +622,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
 
             {/* Core list grid of habits */}
             <div className="space-y-4">
-              {checklist
-                .filter((item) => activeChecklistFilter === 'all' || item.category === activeChecklistFilter)
-                .map((item) => (
+              {checklist.filter((item) => activeChecklistFilter === 'all' || item.category === activeChecklistFilter).length === 0 ? (
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No checklist items"
+                  description="Add your own protection habits above and track them here."
+                />
+              ) : (
+                checklist
+                  .filter((item) => activeChecklistFilter === 'all' || item.category === activeChecklistFilter)
+                  .map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleToggleChecklist(item.id)}
@@ -544,7 +648,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                       className="h-4 w-4 rounded border-neutral-300 text-neutral-900 bg-neutral-50/20"
                     />
                     
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h4 className="text-xs font-semibold leading-none flex items-center gap-1.5">
                         <span className="font-sans">{item.title}</span>
                         <span className="px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider bg-neutral-100 text-neutral-500 uppercase">
@@ -555,8 +659,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                         {item.description}
                       </p>
                     </div>
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleRemoveChecklistItem(item.id);
+                      }}
+                      className="p-1 hover:text-rose-600 cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                ))}
+                  ))
+              )}
             </div>
           </div>
         </div>
@@ -625,7 +739,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                   type="text"
                   value={newAllowedDomain}
                   onChange={(e) => setNewAllowedDomain(e.target.value)}
-                  placeholder="e.g. trustedport.msdn.com"
+                  placeholder="domain to allow"
                   className="flex-1 px-3 py-1.5 text-xs font-mono rounded border border-neutral-200 focus:outline-hidden focus:border-neutral-900 bg-neutral-50/25 w-full"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddAllowedDomain(); }}
                 />
@@ -662,7 +776,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                   type="text"
                   value={newBlockedDomain}
                   onChange={(e) => setNewBlockedDomain(e.target.value)}
-                  placeholder="e.g. bad-link-phish-alert.ru"
+                  placeholder="domain to block"
                   className="flex-1 px-3 py-1.5 text-xs font-mono rounded border border-neutral-200 focus:outline-hidden focus:border-neutral-900 bg-neutral-50/25 w-full"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddBlockedDomain(); }}
                 />
@@ -696,7 +810,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               System Operations Zone
             </h3>
             <p className="text-xs text-neutral-500 mb-4 max-w-xl leading-relaxed">
-              These commands immediately modify the underlying simulated storage registries. Be certain when erasing alert history files.
+              These commands immediately modify local extension storage. Be certain when erasing alert history files.
             </p>
             <div className="flex gap-3 text-xs font-mono">
               <button
