@@ -2,6 +2,14 @@
 
 ClickSafe is a Chrome MV3 security extension that scans links and downloads before they can cause trouble. It runs in the background on every page, marks suspicious links, blocks dangerous navigation, and records local activity in the dashboard.
 
+## Usage Terms
+
+This project is shared for learning, review, and personal non-commercial use only.
+
+If you clone, fork, modify, or share this project, you must give clear credit to the original creator. Do not remove attribution from the README, source comments, or project materials.
+
+Commercial use is not permitted without written permission from the original creator. This includes selling the code, publishing a paid version, using it inside a commercial product, or offering it as part of a paid service.
+
 ## What It Does
 
 - Scans links before opening them from normal clicks and middle-clicks.
