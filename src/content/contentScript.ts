@@ -199,64 +199,42 @@ const inspectFormSubmit = (event: SubmitEvent) => {
   alert(message);
 };
 
-const wrapWindowOpen = () => {
-  const nativeOpen = window.open.bind(window);
-  window.open = (url?: string | URL, target?: string, features?: string) => {
-    const targetUrl = url?.toString() || '';
-    if (!targetUrl || !canInspectUrl(targetUrl) || !cachedSettings.linkProtection) {
-      return nativeOpen(url, target, features);
-    }
-
-    const result = scanUrl(targetUrl, cachedSettings);
-    if (result.status === 'safe') {
-      return nativeOpen(url, target, features);
-    }
-
-    if (result.status === 'caution') {
-      return nativeOpen(url, target, features);
-    }
-
-    const message = getNavigationMessage(targetUrl, result);
-    void logScan(targetUrl, result, 'blocked');
-    alert(message);
-    return null;
-  };
-};
-
 if (typeof document !== 'undefined') {
-  void refreshSettings();
-  chromeApi.storage?.onChanged?.addListener?.((changes: Record<string, { newValue?: ProtectionSettings }>, areaName: string) => {
-    if (areaName === 'local' && changes.settings?.newValue) {
-      cachedSettings = changes.settings.newValue;
-      scannedLinks = new WeakMap<HTMLAnchorElement, string>();
-      void markSuspiciousLinks();
-    }
-  });
-
-  document.addEventListener('click', inspectNavigation, true);
-
-  document.addEventListener('auxclick', inspectNavigation, true);
-  document.addEventListener('submit', inspectFormSubmit, true);
-  wrapWindowOpen();
-
-  markSuspiciousLinks();
-
-  const startObserver = () => {
-    const root = document.documentElement || document.body;
-    if (!root) {
-      window.setTimeout(startObserver, 25);
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      void markSuspiciousLinks();
+  try {
+    void refreshSettings();
+    chromeApi.storage?.onChanged?.addListener?.((changes: Record<string, { newValue?: ProtectionSettings }>, areaName: string) => {
+      if (areaName === 'local' && changes.settings?.newValue) {
+        cachedSettings = changes.settings.newValue;
+        scannedLinks = new WeakMap<HTMLAnchorElement, string>();
+        void markSuspiciousLinks();
+      }
     });
 
-    observer.observe(root, {
-      childList: true,
-      subtree: true,
-    });
-  };
+    document.addEventListener('click', inspectNavigation, true);
+    document.addEventListener('auxclick', inspectNavigation, true);
+    document.addEventListener('submit', inspectFormSubmit, true);
 
-  startObserver();
+    void markSuspiciousLinks();
+
+    const startObserver = () => {
+      const root = document.documentElement || document.body;
+      if (!root) {
+        window.setTimeout(startObserver, 25);
+        return;
+      }
+
+      const observer = new MutationObserver(() => {
+        void markSuspiciousLinks();
+      });
+
+      observer.observe(root, {
+        childList: true,
+        subtree: true,
+      });
+    };
+
+    startObserver();
+  } catch (error) {
+    console.warn('ClickSafe could not start on this page.', error);
+  }
 }

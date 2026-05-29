@@ -56,7 +56,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       </header>
 
       <div className="relative mx-auto flex w-full max-w-7xl flex-col md:flex-row">
-        <aside className="hidden min-h-[calc(100vh-65px)] w-64 shrink-0 border-r border-[#dfe7f5] bg-white p-5 md:block">
+        <aside className="sticky top-[65px] hidden h-[calc(100vh-65px)] w-64 shrink-0 overflow-y-auto border-r border-[#dfe7f5] bg-white p-5 md:block">
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
