@@ -1,13 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @layer base {
   :root {
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', SFMono-Regular, Consolas, monospace;
+    --font-sans: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Nunito Sans', SFMono-Regular, Consolas, monospace;
+    --cs-ink: #181936;
+    --cs-muted: #74758d;
+    --cs-panel: #ffffff;
+    --cs-line: #dfe7f5;
+    --cs-pink: #ec4f97;
+    --cs-pink-dark: #d41470;
+    --cs-blue: #5faaf0;
+    --cs-blue-dark: #4077d5;
+    --cs-soft-blue: #eef6ff;
+  }
+
+  html,
+  body {
+    font-family: var(--font-sans);
+    color: var(--cs-ink);
   }
 }
 
-/* Custom scrollbar styling to sustain the premium black/white design */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -18,12 +33,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: #cbd5e8;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: #9aa9c5;
+}
+
+.cs-glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(209, 220, 238, 0.9);
+  box-shadow: 0 18px 46px rgba(71, 92, 132, 0.11);
+  backdrop-filter: blur(18px);
 }
 
 /* Custom fade-in animations for risk blocks */

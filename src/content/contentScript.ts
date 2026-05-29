@@ -127,25 +127,16 @@ const inspectNavigation = (event: MouseEvent) => {
     return;
   }
 
+  if (result.status === 'caution') {
+    return;
+  }
+
   blockEvent(event);
 
   const message = getNavigationMessage(anchor.href, result);
 
-  if (result.status === 'dangerous') {
-    void logScan(anchor.href, result, 'blocked');
-    alert(message);
-    return;
-  }
-
-  const proceed = confirm(message);
-  void logScan(anchor.href, result, proceed ? 'warned' : 'blocked');
-  if (proceed) {
-    if (anchor.target === '_blank' || event.metaKey || event.ctrlKey || event.button === 1) {
-      window.open(anchor.href, '_blank', 'noopener,noreferrer');
-    } else {
-      window.location.assign(anchor.href);
-    }
-  }
+  void logScan(anchor.href, result, 'blocked');
+  alert(message);
 };
 
 const markSuspiciousLinks = async () => {
@@ -197,20 +188,15 @@ const inspectFormSubmit = (event: SubmitEvent) => {
     return;
   }
 
-  blockEvent(event);
-  const message = getNavigationMessage(form.action, result);
-
-  if (result.status === 'dangerous') {
-    void logScan(form.action, result, 'blocked');
-    alert(message);
+  if (result.status === 'caution') {
     return;
   }
 
-  const proceed = confirm(message);
-  void logScan(form.action, result, proceed ? 'warned' : 'blocked');
-  if (proceed) {
-    form.submit();
-  }
+  blockEvent(event);
+  const message = getNavigationMessage(form.action, result);
+
+  void logScan(form.action, result, 'blocked');
+  alert(message);
 };
 
 const wrapWindowOpen = () => {
@@ -226,16 +212,14 @@ const wrapWindowOpen = () => {
       return nativeOpen(url, target, features);
     }
 
-    const message = getNavigationMessage(targetUrl, result);
-    if (result.status === 'dangerous') {
-      void logScan(targetUrl, result, 'blocked');
-      alert(message);
-      return null;
+    if (result.status === 'caution') {
+      return nativeOpen(url, target, features);
     }
 
-    const proceed = confirm(message);
-    void logScan(targetUrl, result, proceed ? 'warned' : 'blocked');
-    return proceed ? nativeOpen(url, target, features) : null;
+    const message = getNavigationMessage(targetUrl, result);
+    void logScan(targetUrl, result, 'blocked');
+    alert(message);
+    return null;
   };
 };
 

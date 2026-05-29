@@ -23,12 +23,8 @@ import {
   ClipboardList,
   Plus,
   Trash2,
-  ListFilter,
   RefreshCw,
-  Clock,
-  HelpCircle,
   FolderOpen,
-  ArrowRight,
   Info
 } from 'lucide-react';
 
@@ -197,7 +193,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
     return (
       <div className="flex flex-col items-center justify-center p-12 py-24 text-neutral-500 font-mono text-xs">
         <RefreshCw className="h-6 w-6 stroke-[1.5] animate-spin mb-3 text-neutral-800" />
-        <span>Loading ClickSafe Central Module...</span>
+        <span>Loading your protection dashboard...</span>
       </div>
     );
   }
@@ -228,7 +224,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                   ClickSafe Warning: Suspicious File Triggered
                 </h3>
                 <p className="text-xs text-rose-800 font-medium">
-                  Threat Mitigation Block
+                  Blocked before it could open
                 </p>
               </div>
             </div>
@@ -263,7 +259,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               </div>
 
               <div className="space-y-1.5">
-                <span className="text-[10px] uppercase font-mono text-neutral-400">Heuristic Flag Reasons:</span>
+                <span className="text-[10px] uppercase font-mono text-neutral-400">Why ClickSafe flagged it:</span>
                 <div className="space-y-1">
                   {activeWarningItem.flaggedReasons.map((reason, idx) => (
                     <div key={idx} className="text-[11px] font-sans flex items-start gap-1 p-2 bg-neutral-50 border border-neutral-150 rounded">
@@ -309,22 +305,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       {currentTab === 'overview' && (
         <div className="space-y-6 animate-fade-in">
           {/* Main banner block */}
-          <div className="p-6 bg-white border border-neutral-200 rounded-lg shadow-xs flex flex-col md:flex-row items-start justify-between gap-6">
+          <div className="cs-glass-card relative overflow-hidden rounded-[28px] p-7">
+            <div className="absolute right-[-80px] top-[-160px] h-72 w-72 rounded-full bg-[#ffd5e5]/70" />
+            <div className="relative flex flex-col items-start justify-between gap-6 md:flex-row">
             <div className="space-y-1 md:max-w-xl">
-              <h2 className="text-xl font-bold tracking-tight text-neutral-900">
-                Local Security Console
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#181936]">
+                Security dashboard
               </h2>
-              <p className="text-xs text-neutral-500 leading-relaxed font-sans">
-                ClickSafe protects you directly from your browser utilizing local heuristic databases. It inspects links, protects your developer credentials from being leaked, block fake recruitment task scams, and logs file download extensions safely.
+              <p className="mt-3 text-base font-semibold leading-relaxed text-[#74758d]">
+                ClickSafe checks links before you open them, watches suspicious downloads, and keeps risky pages away from your sensitive developer files.
               </p>
             </div>
             
-            <div className="p-4 bg-neutral-950 text-white rounded-lg flex items-center gap-3 border border-neutral-900 self-stretch md:self-auto min-w-[200px] shrink-0 justify-center">
-              <ShieldCheck className="h-6 w-6 text-emerald-400 stroke-[2.25]" />
-              <div className="font-mono">
-                <span className="text-[10px] text-neutral-400 block uppercase leading-none">Guard Status</span>
-                <span className="text-xs font-bold font-sans mt-1 block">Active Shield Mode</span>
+            <div className="rounded-[22px] bg-[#4f4d69] p-5 text-white shadow-[0_18px_38px_rgba(79,77,105,0.22)] flex items-center gap-3 self-stretch md:self-auto min-w-[220px] shrink-0 justify-center">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 text-white">
+                <ShieldCheck className="h-5 w-5" />
               </div>
+              <div>
+                <span className="block text-xs font-extrabold uppercase text-white/65">Status</span>
+                <span className="mt-1 block text-base font-extrabold">Working in the background</span>
+              </div>
+            </div>
             </div>
           </div>
 
@@ -334,28 +335,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               title="Processed URLs"
               value={totalScans}
               icon={Shield}
-              description="Total processed hyperlinks during browser session"
-              trend={{ value: '100% Secure', label: 'Local screening', isPositive: true }}
+              description="Links checked by the extension"
+              trend={{ value: 'Local', label: 'no server required', isPositive: true }}
             />
             <StatCard
-              title="Scam Threats Flagged"
+              title="Risky Links"
               value={dangerousBlockedLinksCount + suspiciousLinksCount}
               icon={AlertTriangle}
-              description="Heuristically blocked phishing or clone pages"
-              trend={{ value: 'Mitigated', label: 'Blocked redirects', isPositive: true }}
+              description="Links that needed a warning or block"
+              trend={{ value: 'Handled', label: 'before navigation', isPositive: true }}
             />
             <StatCard
               title="Dangerous Downloads"
               value={dangerousDownloadsCount}
               icon={ShieldAlert}
-              description="Dangerous file extension formats detected"
-              trend={{ value: 'Protected', label: 'Execution prevented', isPositive: true }}
+              description="Downloads flagged by filename or source"
+              trend={{ value: 'Blocked', label: 'when dangerous', isPositive: true }}
             />
             <StatCard
               title="Active Shields"
               value={activeShieldCount}
               icon={ClipboardList}
-              description="Enabled protection modules"
+              description="Protection layers currently enabled"
               trend={{ value: `${settings.blockedDomains.length} blocked`, label: `${settings.allowedDomains.length} allowed`, isPositive: true }}
             />
           </div>
@@ -369,24 +370,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
 
           {/* Lower layout grid: current configuration summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg border border-neutral-200 p-5 md:col-span-2 space-y-4">
-              <h3 className="text-sm font-semibold text-neutral-950 font-sans pb-2 border-b border-neutral-100">
+            <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)] md:col-span-2 space-y-4">
+              <h3 className="border-b border-[#eef3fb] pb-3 text-lg font-extrabold text-[#181936]">
                 Current Domain Rules
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3 bg-neutral-50 rounded border border-neutral-150">
-                  <h4 className="text-[11px] font-bold text-neutral-900 leading-tight">
+                <div className="rounded-[18px] border border-[#dfe7f5] bg-[#f4f8ff] p-4">
+                  <h4 className="text-sm font-extrabold leading-tight text-[#181936]">
                     Allowed Domains
                   </h4>
                   {settings.allowedDomains.length === 0 ? (
-                    <p className="text-[10px] text-neutral-500 font-sans mt-1.5 leading-relaxed">
+                    <p className="mt-1.5 text-sm font-semibold leading-relaxed text-[#74758d]">
                       No allowed domains have been added.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {settings.allowedDomains.slice(0, 8).map((domain) => (
-                        <span key={domain} className="px-1.5 py-0.5 rounded bg-white border border-neutral-200 text-[10px] font-mono text-neutral-700">
+                        <span key={domain} className="rounded-full border border-[#dfe7f5] bg-white px-2 py-1 text-xs font-extrabold text-[#4f4d69]">
                           {domain}
                         </span>
                       ))}
@@ -394,18 +395,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                   )}
                 </div>
 
-                <div className="p-3 bg-neutral-50 rounded border border-neutral-150">
-                  <h4 className="text-[11px] font-bold text-neutral-900 leading-tight">
+                <div className="rounded-[18px] border border-[#dfe7f5] bg-[#f4f8ff] p-4">
+                  <h4 className="text-sm font-extrabold leading-tight text-[#181936]">
                     Blocked Domains
                   </h4>
                   {settings.blockedDomains.length === 0 ? (
-                    <p className="text-[10px] text-neutral-500 font-sans mt-1.5 leading-relaxed">
+                    <p className="mt-1.5 text-sm font-semibold leading-relaxed text-[#74758d]">
                       No blocked domains have been added.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {settings.blockedDomains.slice(0, 8).map((domain) => (
-                        <span key={domain} className="px-1.5 py-0.5 rounded bg-white border border-rose-100 text-[10px] font-mono text-rose-700">
+                        <span key={domain} className="rounded-full border border-[#f5bad4] bg-white px-2 py-1 text-xs font-extrabold text-[#d41470]">
                           {domain}
                         </span>
                       ))}
@@ -415,38 +416,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-neutral-200 p-5 space-y-3 flex flex-col justify-between">
+            <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)] space-y-3 flex flex-col justify-between">
               <div>
-                <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-semibold mb-2.5">
+                <h3 className="mb-3 text-sm font-extrabold uppercase text-[#74758d]">
                   Protection Metrics Check
                 </h3>
 
                 <div className="space-y-3 text-xs">
-                  <div className="flex items-center justify-between pb-1.5 border-b border-neutral-50">
-                    <span className="text-neutral-500 font-sans">Active Link Protection</span>
-                    <span className={`font-mono font-bold ${settings.linkProtection ? 'text-emerald-700' : 'text-neutral-400'}`}>
+                  <div className="flex items-center justify-between border-b border-[#eef3fb] pb-2">
+                    <span className="font-semibold text-[#74758d]">Active Link Protection</span>
+                    <span className={`font-extrabold ${settings.linkProtection ? 'text-[#1f5dcc]' : 'text-[#b9bbc8]'}`}>
                       {settings.linkProtection ? '[ONLINE]' : '[OFFLINE]'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pb-1.5 border-b border-neutral-50">
-                    <span className="text-neutral-500 font-sans font-medium">Developer secret key watch</span>
-                    <span className={`font-mono font-bold ${settings.developerProtection ? 'text-emerald-700' : 'text-neutral-400'}`}>
+                  <div className="flex items-center justify-between border-b border-[#eef3fb] pb-2">
+                    <span className="font-semibold text-[#74758d]">Developer secret key watch</span>
+                    <span className={`font-extrabold ${settings.developerProtection ? 'text-[#1f5dcc]' : 'text-[#b9bbc8]'}`}>
                       {settings.developerProtection ? '[ON]' : '[OFF]'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pb-1.5 border-b border-neutral-50">
-                    <span className="text-neutral-500 font-sans font-medium">Recruit phishing scanner</span>
-                    <span className={`font-mono font-bold ${settings.fakeJobWarnings ? 'text-emerald-700' : 'text-neutral-400'}`}>
+                  <div className="flex items-center justify-between border-b border-[#eef3fb] pb-2">
+                    <span className="font-semibold text-[#74758d]">Recruit phishing scanner</span>
+                    <span className={`font-extrabold ${settings.fakeJobWarnings ? 'text-[#1f5dcc]' : 'text-[#b9bbc8]'}`}>
                       {settings.fakeJobWarnings ? '[ON]' : '[OFF]'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-neutral-900 text-white rounded border border-neutral-800 flex items-center gap-1.5 mt-4">
-                <Info className="h-4 w-4 shrink-0 text-amber-400" />
-                <p className="text-[9px] font-mono leading-tight">
-                  No server backend is required. Scans and settings stay in local browser storage.
+              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-[#dfe7f5] bg-[#f4f8ff] p-4 text-[#4f4d69]">
+                <Info className="h-4 w-4 shrink-0 text-[#4d7ed8]" />
+                <p className="text-xs font-bold leading-tight">
+                  Your settings and scan history stay in this browser.
                 </p>
               </div>
             </div>
@@ -457,12 +458,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       {/* VIEW PANEL: MANUAL LINK SCANNER */}
       {currentTab === 'scanner' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
-            <h2 className="text-md font-bold tracking-tight text-neutral-900">
-              Manual Link Diagnostics
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-[#181936]">
+              Check a link manually
             </h2>
-            <p className="text-xs text-neutral-500 max-w-2xl mt-1 leading-relaxed">
-              Verify links before navigating to them. Enter any URL below. It scans the protocol, subdomains list, redirects structures, punycode characters, and flags threat criteria immediately.
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-[#74758d]">
+              Paste a link when you want a second look before opening it.
             </p>
           </div>
 
@@ -480,28 +481,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       {/* VIEW PANEL: FILE DOWNLOAD PROTECTION */}
       {currentTab === 'downloads' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-md font-bold tracking-tight text-neutral-900">
-                Download Protection
+              <h2 className="text-xl font-extrabold tracking-tight text-[#181936]">
+                Download protection
               </h2>
-              <p className="text-xs text-neutral-500">
-                Chrome download events are monitored by the extension service worker and logged here when risk indicators are found.
+              <p className="text-sm font-semibold text-[#74758d]">
+                Suspicious downloads appear here when the background scanner catches them.
               </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
             <div className="flex items-center gap-2.5 pb-3 border-b border-neutral-100 mb-4">
-              <div className="p-1.5 rounded bg-neutral-100 border border-neutral-200">
-                <FolderOpen className="h-4 w-4 text-neutral-600" />
+              <div className="rounded-2xl border border-[#dfe7f5] bg-[#f4f8ff] p-2">
+                <FolderOpen className="h-4 w-4 text-[#4d7ed8]" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900">
-                  Inspected Files Registry
+                <h3 className="text-base font-extrabold text-[#181936]">
+                  Checked downloads
                 </h3>
-                <p className="text-xs text-neutral-400">
-                  List of downloaded files tracked by Chrome download monitor.
+                <p className="text-sm font-semibold text-[#74758d]">
+                  Files that matched risky filename or source patterns.
                 </p>
               </div>
             </div>
@@ -558,16 +559,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       {/* VIEW PANEL: SAFE CHECKLIST */}
       {currentTab === 'checklist' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
-            <h2 className="text-md font-bold tracking-tight text-neutral-900">
-              Interactive Self-Protection Checklists
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-[#181936]">
+              Personal safety checklist
             </h2>
-            <p className="text-xs text-neutral-500">
-              Technical tools are powerful, but maintaining solid habits is the key to preventing attacks. Use these lists to audit your security practices.
+            <p className="mt-2 text-sm font-semibold text-[#74758d]">
+              Keep your own reminders for the habits you care about.
             </p>
           </div>
 
-          <div className="bg-white border border-neutral-200 rounded-lg p-5">
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
             <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr_auto] gap-2 pb-5 border-b border-neutral-150 mb-5">
               <select
                 value={newChecklistCategory}
@@ -611,8 +612,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                   onClick={() => setActiveChecklistFilter(filter)}
                   className={`px-3 py-1 text-xs font-mono capitalize rounded-md cursor-pointer transition-colors ${
                     activeChecklistFilter === filter
-                      ? 'bg-neutral-900 text-white font-semibold'
-                      : 'bg-neutral-50 text-neutral-600 hover:bg-neutral-100'
+                      ? 'bg-[#4f4d69] text-white font-extrabold'
+                      : 'bg-[#f4f8ff] text-[#74758d] hover:bg-white'
                   }`}
                 >
                   {filter === 'all' ? 'All categories' : filter === 'dev' ? 'Developer' : filter}
@@ -637,8 +638,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                     onClick={() => handleToggleChecklist(item.id)}
                     className={`p-4 border rounded-lg transition-all cursor-pointer flex items-start gap-4 ${
                       item.checked
-                        ? 'bg-emerald-50/20 border-emerald-150 text-neutral-700'
-                        : 'bg-white border-neutral-200 hover:border-neutral-900 text-neutral-900'
+                        ? 'bg-[#eefbf1] border-[#bdecc8] text-[#181936]'
+                        : 'bg-white border-[#dfe7f5] hover:border-[#aac5ed] text-[#181936]'
                     }`}
                   >
                     <input
@@ -679,48 +680,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
       {/* VIEW PANEL: SHIELD SETTINGS */}
       {currentTab === 'settings' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-white rounded-lg border border-neutral-200 p-5">
-            <h2 className="text-md font-bold tracking-tight text-neutral-900">
-              Heuristic Mitigation Configuration
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-[#181936]">
+              Protection settings
             </h2>
-            <p className="text-xs text-neutral-500">
-              Adjust how local algorithms audit your browsing experience.
+            <p className="mt-2 text-sm font-semibold text-[#74758d]">
+              Choose what ClickSafe should watch for while you browse.
             </p>
           </div>
 
-          <div className="bg-white border border-neutral-200 rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-neutral-950 pb-3 border-b border-neutral-100">
+          <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+            <h3 className="border-b border-[#eef3fb] pb-3 text-lg font-extrabold text-[#181936]">
               Active Security Shields
             </h3>
 
             <div className="divide-y divide-neutral-100">
               <ToggleRow
-                title="Real-Time Hyperlink Audit"
-                description="Checks URLs you hover or query. Automatically assesses subdomain depth, punycode spoofing, and insecure unencrypted protocol streams."
+                title="Scan links before opening"
+                description="Checks clicked links for disguised files, redirects, fake brands, punycode, and suspicious hosts."
                 checked={settings.linkProtection}
                 onChange={() => handleToggleSetting('linkProtection')}
               />
               <ToggleRow
-                title="Download Extension Monitor"
-                description="Intercepts file download requests to warning-flag potentially risky installer payloads (e.g. exe, msi, ps1, bat, zip)."
+                title="Watch downloads"
+                description="Flags files with risky names, extensions, or sources before they become easy to miss."
                 checked={settings.downloadMonitoring}
                 onChange={() => handleToggleSetting('downloadMonitoring')}
               />
               <ToggleRow
-                title="Anti Job Scam Shield"
-                description="Checks recruiter briefs, coding assessments, or task installer URLs for fraud indicators (such as 'assessments brief' or 'interview run' matching)."
+                title="Job scam warnings"
+                description="Looks for recruiter-task patterns that try to push you into running a file or script."
                 checked={settings.fakeJobWarnings}
                 onChange={() => handleToggleSetting('fakeJobWarnings')}
               />
               <ToggleRow
-                title="Developer Secret Watch"
-                description="Flags files or requests trying to access .env secrets, git config folders, wallet seeds, npm tokens, or SSH keys."
+                title="Developer secret watch"
+                description="Warns on links and files that mention .env files, tokens, SSH keys, wallets, or credentials."
                 checked={settings.developerProtection}
                 onChange={() => handleToggleSetting('developerProtection')}
               />
               <ToggleRow
-                title="Maximum Tight Mode"
-                description="Requires absolute domain-level verification. Flags any domain without secure records or high reputation score directly, regardless of keywords."
+                title="Strict mode"
+                description="Treats unknown domains with extra caution unless you add them to your allowed list."
                 checked={settings.strictMode}
                 onChange={() => handleToggleSetting('strictMode')}
               />
@@ -729,8 +730,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
 
           {/* Whitelisting & Blocklists */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white border border-neutral-200 rounded-lg p-5">
-              <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-semibold mb-3">
+            <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+              <h3 className="mb-3 text-sm font-extrabold uppercase text-[#74758d]">
                 Allowed Domain Registry
               </h3>
               
@@ -745,7 +746,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 />
                 <button
                   onClick={handleAddAllowedDomain}
-                  className="px-3 py-1.5 text-xs font-mono bg-neutral-900 text-white rounded cursor-pointer w-full sm:w-auto text-center shrink-0"
+                  className="w-full shrink-0 cursor-pointer rounded-xl bg-[#4f4d69] px-4 py-2 text-center text-sm font-extrabold text-white sm:w-auto"
                 >
                   White list
                 </button>
@@ -766,8 +767,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
               </div>
             </div>
 
-            <div className="bg-white border border-neutral-200 rounded-lg p-5">
-              <h3 className="text-xs font-mono uppercase tracking-wider text-neutral-400 font-semibold mb-3">
+            <div className="rounded-[24px] border border-[#dfe7f5] bg-white/90 p-5 shadow-[0_16px_36px_rgba(71,92,132,0.08)]">
+              <h3 className="mb-3 text-sm font-extrabold uppercase text-[#74758d]">
                 Restricted Domain Blocklist
               </h3>
               
@@ -782,7 +783,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentTab }) => {
                 />
                 <button
                   onClick={handleAddBlockedDomain}
-                  className="px-3 py-1.5 text-xs font-mono bg-neutral-900 text-white rounded cursor-pointer w-full sm:w-auto text-center shrink-0"
+                  className="w-full shrink-0 cursor-pointer rounded-xl bg-[#4f4d69] px-4 py-2 text-center text-sm font-extrabold text-white sm:w-auto"
                 >
                   Block list
                 </button>

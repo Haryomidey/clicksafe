@@ -25,94 +25,69 @@ export const AppShell: React.FC<AppShellProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-neutral-100 flex flex-col font-sans">
-      <div className="bg-neutral-900 border-b border-neutral-800 text-white font-mono text-[10px] tracking-widest uppercase py-1.5 px-4 text-center flex items-center justify-center gap-1.5 shrink-0 select-none">
-        <span className="h-1 py-1 px-1 rounded bg-emerald-500 inline-block animate-ping"></span>
-        <span>Local Threat Protection Active - Zero Cloud Data Leaks</span>
-      </div>
-
-      <header className="bg-white border-b border-neutral-200/80 px-4 py-3 sticky top-0 md:relative z-20 shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-md bg-neutral-900 text-white flex items-center justify-center border border-neutral-800 shadow-sm">
-              <Shield className="h-4 w-4 fill-white stroke-[2]" />
+    <div className="min-h-screen bg-[#f6f8fc] font-sans text-[#181936]">
+      <header className="sticky top-0 z-20 border-b border-[#dfe7f5] bg-white/90 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="cursor-pointer rounded-xl p-2 text-[#74758d] hover:bg-[#f1f4fa] md:hidden"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#181936] text-white shadow-sm">
+              <Shield className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-neutral-900 tracking-tight font-sans text-base">
-                  ClickSafe
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono border border-neutral-200 bg-neutral-50 text-neutral-500 select-none">
-                  V3 Core
-                </span>
+              <div className="text-xl font-extrabold tracking-tight">
+                ClickSafe
               </div>
-              <p className="text-[10px] text-neutral-400 font-mono">
-                Heuristic Endpoint Shield
+              <p className="text-[11px] font-bold text-[#74758d]">
+                {runningInChrome ? 'Chrome protection is running' : 'Local browser preview'}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 rounded-md border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 md:hidden cursor-pointer"
-          >
-            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
+          <div className="hidden items-center gap-2 rounded-full border border-[#dfe7f5] bg-[#f6f8fc] px-4 py-2 text-sm font-extrabold text-[#4f4d69] md:flex">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#21b321]" />
+            Background scanning on
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:flex-row min-h-0 relative">
-        <aside className="hidden md:flex flex-col w-64 p-5 py-6 bg-white border-r border-neutral-200 shrink-0 gap-6">
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest pl-2">
-              Management Options
-            </span>
-            <nav className="space-y-1 pt-2">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => onTabChange(item.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-md transition-all cursor-pointer text-left ${
-                      isActive
-                        ? 'bg-neutral-900 text-white font-semibold shadow-xs'
-                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col md:flex-row">
+        <aside className="hidden min-h-[calc(100vh-65px)] w-64 shrink-0 border-r border-[#dfe7f5] bg-white p-5 md:block">
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-extrabold transition ${
+                    isActive
+                      ? 'bg-[#181936] text-white shadow-sm'
+                      : 'text-[#74758d] hover:bg-[#f6f8fc] hover:text-[#181936]'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0 stroke-[1.9]" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-          <div className="mt-auto border-t border-neutral-100 pt-4 space-y-3 font-sans">
-            <div>
-              <span className="text-[10px] font-mono text-neutral-400 block uppercase">
-                Chrome API Link
-              </span>
-              <p className="text-xs text-neutral-700 font-medium mt-1 inline-flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>{runningInChrome ? 'Connected' : 'Browser Fallback'}</span>
-              </p>
-            </div>
-
-            <div className="p-3 bg-neutral-50 rounded border border-neutral-150">
-              <span className="text-[9px] font-mono uppercase text-neutral-400 block tracking-wider leading-none">
-                Local Database Info
-              </span>
-              <p className="text-[10px] text-neutral-500 mt-1 leading-normal font-sans">
-                Toggles and alerts persist via <code className="font-mono text-neutral-800">chrome.storage.local</code> in real time.
-              </p>
-            </div>
+          <div className="mt-8 rounded-2xl border border-[#dfe7f5] bg-[#f6f8fc] p-4">
+            <p className="text-xs font-extrabold uppercase text-[#74758d]">Local protection</p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-[#74758d]">
+              Scans stay on this browser. No cloud account or server is needed.
+            </p>
           </div>
         </aside>
 
         {mobileMenuOpen && (
-          <div className="md:hidden absolute inset-x-0 top-0 bg-white border-b border-neutral-200 shadow-md p-4 z-10 animate-slide-down">
+          <div className="absolute inset-x-4 top-3 z-30 rounded-2xl border border-[#dfe7f5] bg-white p-3 shadow-2xl md:hidden">
             <nav className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -124,10 +99,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                       onTabChange(item.id);
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-md text-left cursor-pointer ${
-                      isActive
-                        ? 'bg-neutral-900 text-white font-semibold'
-                        : 'text-neutral-600 hover:bg-neutral-50'
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-extrabold ${
+                      isActive ? 'bg-[#181936] text-white' : 'text-[#74758d] hover:bg-[#f6f8fc]'
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -139,7 +112,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         )}
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 min-w-0 overflow-y-auto">
+        <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>

@@ -20,16 +20,16 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
   return (
     <div
       id={id}
-      className="flex items-start justify-between gap-6 py-4 border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/50 px-2 rounded-md transition-colors"
+      className="flex items-start justify-between gap-6 rounded-2xl px-3 py-4 transition-colors hover:bg-[#f4f8ff]"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-semibold text-neutral-900 leading-tight">
+          <h4 className="text-base font-extrabold leading-tight text-[#181936]">
             {title}
           </h4>
           {statusBadge}
         </div>
-        <p className="text-xs text-neutral-500 mt-1 leading-relaxed font-sans max-w-xl">
+        <p className="mt-1 max-w-xl text-sm font-semibold leading-relaxed text-[#74758d]">
           {description}
         </p>
       </div>
@@ -39,13 +39,13 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-1 focus:ring-neutral-900 focus:ring-offset-2 ${
-          checked ? 'bg-neutral-900' : 'bg-neutral-200'
+        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full p-1 shadow-inner transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-[#8db9f3] ${
+          checked ? 'bg-[#4d7ed8]' : 'bg-[#d9dce5]'
         }`}
       >
         <span
-          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-            checked ? 'translate-x-4' : 'translate-x-0'
+          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-[0_3px_8px_rgba(24,25,54,0.22)] ring-0 transition duration-200 ease-in-out ${
+            checked ? 'translate-x-6' : 'translate-x-0'
           }`}
         />
       </button>

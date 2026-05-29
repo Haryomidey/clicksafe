@@ -92,6 +92,23 @@ const isIpAddressHost = (host: string) => {
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || /^\[[0-9a-f:]+\]$/i.test(host);
 };
 
+const isLocalOrPrivateHost = (host: string) => {
+  if (host === 'localhost' || host.endsWith('.localhost') || host === '[::1]') {
+    return true;
+  }
+
+  const parts = host.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) {
+    return false;
+  }
+
+  const [first, second] = parts;
+  return first === 10 ||
+    first === 127 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168);
+};
+
 const isOfficialBrandDomain = (host: string, domains: string[]) => {
   return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
 };
@@ -137,6 +154,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, dep
   const search = normalizeForInspection(urlObj.search);
   const fullUrlText = normalizeForInspection(urlObj.href);
   const protocol = urlObj.protocol.toLowerCase();
+  const isLocalHost = isLocalOrPrivateHost(host);
 
   const isAllowed = settings?.allowedDomains?.some((domain) => hostMatchesDomain(host, domain));
   const isBlocked = settings?.blockedDomains?.some((domain) => hostMatchesDomain(host, domain));
@@ -149,16 +167,16 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, dep
     reasons.push('URL hides the real destination after a username/password marker.');
   }
 
-  if (isIpAddressHost(host) && !isAllowed) {
+  if (isIpAddressHost(host) && !isAllowed && !isLocalHost) {
     reasons.push('Uses a raw IP address instead of a recognizable domain.');
   }
 
-  if (urlObj.port && !['80', '443'].includes(urlObj.port) && !isAllowed) {
+  if (urlObj.port && !['80', '443'].includes(urlObj.port) && !isAllowed && !isLocalHost) {
     reasons.push(`Uses a non-standard network port (${urlObj.port}).`);
   }
 
   // 1. Protocol Evaluation (HTTP vs HTTPS)
-  if (protocol === 'http:' && !isAllowed) {
+  if (protocol === 'http:' && !isAllowed && !isLocalHost) {
     reasons.push('Insecure connection (HTTP protocol is unencrypted and vulnerable to monitoring).');
   }
 
