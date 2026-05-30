@@ -19,6 +19,8 @@ const LEGITIMATE_CLOUD_DOMAINS = [
 
 const OFFICIAL_DEVELOPER_DOMAINS = [
   'github.com',
+  'github.community',
+  'githubstatus.com',
   'stackoverflow.com',
   'npmjs.com',
   'npmjs.org',
@@ -35,7 +37,7 @@ const BRAND_DOMAINS: Record<string, string[]> = {
   facebook: ['facebook.com', 'fb.com', 'meta.com'],
   instagram: ['instagram.com'],
   netflix: ['netflix.com'],
-  github: ['github.com', 'githubusercontent.com'],
+  github: ['github.com', 'githubusercontent.com', 'github.community', 'githubstatus.com'],
   npm: ['npmjs.com', 'npmjs.org']
 };
 
@@ -43,6 +45,11 @@ const REDIRECT_PARAM_NAMES = [
   'url', 'u', 'uri', 'redirect', 'redirect_url', 'redirect_uri', 'next',
   'continue', 'target', 'to', 'dest', 'destination', 'return', 'returnurl',
   'return_url', 'callback', 'checkout_url', 'download', 'file', 'filename'
+];
+
+const FILE_REFERENCE_PARAM_NAMES = [
+  'download', 'file', 'filename', 'attachment', 'installer', 'package',
+  'payload', 'script', 'setup'
 ];
 
 const CONTROL_AND_DIRECTIONAL_CHARS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g;
@@ -80,12 +87,16 @@ const stripFilenameNoise = (value: string) => {
 const findDangerousExtension = (value: string) => {
   const cleaned = stripFilenameNoise(value);
   return DANGEROUS_EXTENSIONS.find((ext) => {
-    return cleaned.endsWith(ext) || cleaned.includes(`${ext}/`) || cleaned.includes(`${ext}.`);
+    return cleaned.endsWith(ext) || cleaned.includes(`${ext}/`);
   });
 };
 
 const looksLikeUrl = (value: string) => {
   return /^https?:\/\//i.test(safeDecode(value).trim());
+};
+
+const looksLikeFileReference = (name: string, value: string) => {
+  return FILE_REFERENCE_PARAM_NAMES.includes(name) || looksLikeUrl(value);
 };
 
 const isIpAddressHost = (host: string) => {
@@ -131,6 +142,30 @@ export const parseUrl = (urlString: string): URL | null => {
 const hostMatchesDomain = (host: string, domain: string) => {
   const normalized = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   return normalized.length > 0 && (host === normalized || host.endsWith(`.${normalized}`));
+};
+
+const getHostLabels = (host: string) => {
+  return host.split('.').filter(Boolean);
+};
+
+const referencesBrandInHost = (host: string, brand: string) => {
+  return getHostLabels(host).some((label) => label === brand || label.startsWith(`${brand}-`) || label.endsWith(`-${brand}`));
+};
+
+const isTrustedRepositoryFilePage = (urlObj: URL, host: string, path: string) => {
+  if (host === 'github.com' || host.endsWith('.github.com')) {
+    return /^\/[^/]+\/[^/]+\/(blob|tree)\//.test(path);
+  }
+
+  if (host === 'gitlab.com' || host.endsWith('.gitlab.com')) {
+    return /^\/[^/]+\/[^/]+\/-\/(blob|tree)\//.test(path);
+  }
+
+  if (host === 'bitbucket.org' || host.endsWith('.bitbucket.org')) {
+    return /^\/[^/]+\/[^/]+\/src\//.test(path);
+  }
+
+  return urlObj.searchParams.get('raw') !== '1' && OFFICIAL_DEVELOPER_DOMAINS.some((domain) => hostMatchesDomain(host, domain));
 };
 
 /**
@@ -192,7 +227,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, dep
   }
 
   Object.entries(BRAND_DOMAINS).forEach(([brand, officialDomains]) => {
-    if (host.includes(brand) && !isOfficialBrandDomain(host, officialDomains) && !isAllowed) {
+    if (referencesBrandInHost(host, brand) && !isOfficialBrandDomain(host, officialDomains) && !isAllowed) {
       reasons.push(`Domain references ${brand} but is not an official ${brand} domain.`);
     }
   });
@@ -253,7 +288,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, dep
   // 9. Unusual files in URL
   const pathFilename = path.split('/').pop() || path;
   const matchedExt = findDangerousExtension(pathFilename) || findDangerousExtension(path);
-  if (matchedExt) {
+  if (matchedExt && !isTrustedRepositoryFilePage(urlObj, host, path)) {
     reasons.push(`Direct URL executable download (${matchedExt}) which can run system-level commands.`);
   }
 
@@ -262,7 +297,7 @@ export const scanUrl = (rawUrlString: string, settings?: ProtectionSettings, dep
     const normalizedValue = normalizeForInspection(value);
     const queryExt = findDangerousExtension(normalizedValue);
 
-    if (queryExt) {
+    if (queryExt && looksLikeFileReference(normalizedName, value)) {
       reasons.push(`Query parameter "${normalizedName}" references a dangerous file extension (${queryExt}).`);
     }
 

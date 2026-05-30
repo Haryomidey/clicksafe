@@ -54,6 +54,12 @@ export const evaluateRisk = (reasons: string[], isFileDownload = false): RiskEva
       score += 25;
     } else if (r.includes('too many subdomains') || r.includes('nested')) {
       score += 20;
+    } else if (r.includes('suspicious install script')) {
+      score += 50;
+    } else if (r.includes('package lifecycle script')) {
+      score += 25;
+    } else if (r.includes('github actions workflow')) {
+      score += 45;
     } else if (r.includes('direct url executable download')) {
       score += 70;
     } else if (r.includes('dangerous extension') || r.includes('executable')) {

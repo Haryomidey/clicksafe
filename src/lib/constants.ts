@@ -4,7 +4,7 @@ export const STORAGE_VERSION = 1;
 
 export const DANGEROUS_EXTENSIONS = [
   '.exe', '.msi', '.bat', '.cmd', '.ps1', '.vbs', '.js',
-  '.jar', '.scr', '.reg', '.hta', '.lnk', '.zip', '.rar', '.7z'
+  '.jar', '.scr', '.reg', '.hta', '.lnk'
 ];
 
 export const FAKE_JOB_KEYWORDS = [
