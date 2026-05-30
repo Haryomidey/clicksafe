@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsx scripts/build-extension.ts",
+    "dev": "node api.js && vite",
+    "build": "node api.js && tsx scripts/build-extension.ts",
     "preview": "vite preview",
     "clean": "powershell -NoProfile -Command \"Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue\"",
     "lint": "tsc --noEmit"
