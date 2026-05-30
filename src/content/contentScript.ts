@@ -12,11 +12,47 @@ import { evaluateRisk, RiskEvaluation } from '../lib/risk';
 const chromeApi = getChromeApi();
 let scannedLinks = new WeakMap<HTMLAnchorElement, string>();
 let cachedSettings: ProtectionSettings = INITIAL_SETTINGS;
+let extensionContextActive = true;
 const repositoryRiskCache = new Map<string, RiskEvaluation>();
 
+const isExtensionContextError = (error: unknown) => {
+  return error instanceof Error && error.message.toLowerCase().includes('extension context invalidated');
+};
+
+const handleAsyncError = (error: unknown) => {
+  if (isExtensionContextError(error)) {
+    extensionContextActive = false;
+    return;
+  }
+
+  console.warn('ClickSafe content script error.', error);
+};
+
+const runSafely = (task: Promise<unknown>) => {
+  task.catch(handleAsyncError);
+};
+
+const canUseExtensionContext = () => {
+  try {
+    return extensionContextActive && typeof chromeApi.runtime?.id !== 'undefined';
+  } catch {
+    extensionContextActive = false;
+    return false;
+  }
+};
+
 const getSettings = async (): Promise<ProtectionSettings | null> => {
-  const store = await chromeApi.storage.local.get(['settings']);
-  return store.settings || null;
+  if (!canUseExtensionContext()) {
+    return null;
+  }
+
+  try {
+    const store = await chromeApi.storage.local.get(['settings']);
+    return store.settings || null;
+  } catch (error) {
+    handleAsyncError(error);
+    return null;
+  }
 };
 
 const refreshSettings = async () => {
@@ -45,22 +81,30 @@ const logScan = async (
     return;
   }
 
-  const store = await chromeApi.storage.local.get(['history']);
-  const history: ScanHistoryItem[] = Array.isArray(store.history) ? store.history : [];
-  const item: ScanHistoryItem = {
-    id: `h_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-    url,
-    timestamp: Date.now(),
-    riskScore: result.score,
-    status: result.status,
-    reasons: result.reasons,
-    type: getLinkType(result.reasons),
-    actionTaken,
-  };
+  if (!canUseExtensionContext()) {
+    return;
+  }
 
-  await chromeApi.storage.local.set({
-    history: [item, ...history].slice(0, 250),
-  });
+  try {
+    const store = await chromeApi.storage.local.get(['history']);
+    const history: ScanHistoryItem[] = Array.isArray(store.history) ? store.history : [];
+    const item: ScanHistoryItem = {
+      id: `h_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      url,
+      timestamp: Date.now(),
+      riskScore: result.score,
+      status: result.status,
+      reasons: result.reasons,
+      type: getLinkType(result.reasons),
+      actionTaken,
+    };
+
+    await chromeApi.storage.local.set({
+      history: [item, ...history].slice(0, 250),
+    });
+  } catch (error) {
+    handleAsyncError(error);
+  }
 };
 
 const findAnchor = (target: EventTarget | null): HTMLAnchorElement | null => {
@@ -440,6 +484,10 @@ const blockEvent = (event: Event) => {
 };
 
 const inspectNavigation = (event: MouseEvent) => {
+  if (!extensionContextActive) {
+    return;
+  }
+
   const anchor = findAnchor(event.target);
   if (!anchor || !anchor.href) {
     return;
@@ -463,11 +511,15 @@ const inspectNavigation = (event: MouseEvent) => {
 
   const message = getNavigationMessage(anchor.href, result);
 
-  void logScan(anchor.href, result, 'blocked');
+  runSafely(logScan(anchor.href, result, 'blocked'));
   alert(message);
 };
 
 const markSuspiciousLinks = async () => {
+  if (!extensionContextActive) {
+    return;
+  }
+
   const settings = await getSettings();
   if (!settings?.linkProtection) {
     return;
@@ -494,6 +546,10 @@ const markSuspiciousLinks = async () => {
 };
 
 const inspectFormSubmit = (event: SubmitEvent) => {
+  if (!extensionContextActive) {
+    return;
+  }
+
   const form = event.target instanceof HTMLFormElement ? event.target : null;
   if (!form || !form.action || !canInspectUrl(form.action)) {
     return;
@@ -516,18 +572,22 @@ const inspectFormSubmit = (event: SubmitEvent) => {
   blockEvent(event);
   const message = getNavigationMessage(form.action, result);
 
-  void logScan(form.action, result, 'blocked');
+  runSafely(logScan(form.action, result, 'blocked'));
   alert(message);
 };
 
 if (typeof document !== 'undefined') {
   try {
-    void refreshSettings();
+    runSafely(refreshSettings());
     chromeApi.storage?.onChanged?.addListener?.((changes: Record<string, { newValue?: ProtectionSettings }>, areaName: string) => {
+      if (!extensionContextActive) {
+        return;
+      }
+
       if (areaName === 'local' && changes.settings?.newValue) {
         cachedSettings = changes.settings.newValue;
         scannedLinks = new WeakMap<HTMLAnchorElement, string>();
-        void markSuspiciousLinks();
+        runSafely(markSuspiciousLinks());
       }
     });
 
@@ -535,7 +595,7 @@ if (typeof document !== 'undefined') {
     document.addEventListener('auxclick', inspectNavigation, true);
     document.addEventListener('submit', inspectFormSubmit, true);
 
-    void markSuspiciousLinks();
+    runSafely(markSuspiciousLinks());
 
     const startObserver = () => {
       const root = document.documentElement || document.body;
@@ -545,7 +605,12 @@ if (typeof document !== 'undefined') {
       }
 
       const observer = new MutationObserver(() => {
-        void markSuspiciousLinks();
+        if (!extensionContextActive) {
+          observer.disconnect();
+          return;
+        }
+
+        runSafely(markSuspiciousLinks());
       });
 
       observer.observe(root, {
